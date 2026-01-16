@@ -10,17 +10,17 @@ services:
       - HOSTNAME="PlexServer"
     volumes:
       - ./provision/plex:/config
-      - "${WIN_MEDIA_ROOT}/Movies:/data/media/movies"
-      - "${WIN_MEDIA_ROOT}/TV Series:/data/media/tv"
+      - "${WIN_DATA_ROOT}/media/movies:/data/media/movies"
+      - "${WIN_DATA_ROOT}/media/tv:/data/media/tv"
     ports:
-      - "32400:32400/tcp"   # Main Access
-      - "1900:1900/udp"     # DLNA
-      - "32469:32469/tcp"   # DLNA
-      - "8324:8324/tcp"     # Plex Companion
-      - "32410:32410/udp"   # GDM Discovery
-      - "32412:32412/udp"   # GDM Discovery
-      - "32413:32413/udp"   # GDM Discovery
-      - "32414:32414/udp"   # GDM Discovery
+      - "32400:32400/tcp" # Main Access
+      - "1900:1900/udp" # DLNA
+      - "32469:32469/tcp" # DLNA
+      - "8324:8324/tcp" # Plex Companion
+      - "32410:32410/udp" # GDM Discovery
+      - "32412:32412/udp" # GDM Discovery
+      - "32413:32413/udp" # GDM Discovery
+      - "32414:32414/udp" # GDM Discovery
     privileged: true
     restart: unless-stopped
     networks:
@@ -48,8 +48,7 @@ services:
       - ./provision/.env.defaults
     volumes:
       - ./provision/radarr:/config
-      - "${WIN_MEDIA_ROOT}/Movies:/data/movies"
-      - "${WIN_DOWNLOADS}:/data/downloads"
+      - "${WIN_DATA_ROOT}:/data"
     ports:
       - "10501:7878"
     restart: unless-stopped
@@ -63,8 +62,7 @@ services:
       - ./provision/.env.defaults
     volumes:
       - ./provision/sonarr:/config
-      - "${WIN_MEDIA_ROOT}/TV Series:/data/tv"
-      - "${WIN_DOWNLOADS}:/data/downloads"
+      - "${WIN_DATA_ROOT}:/data"
     ports:
       - "10502:8989"
     restart: unless-stopped
@@ -94,7 +92,7 @@ services:
       - WEBUI_PORT=10504
     volumes:
       - ./provision/qbittorrent:/config
-      - "${WIN_DOWNLOADS}:/data/downloads"
+      - "${WIN_DATA_ROOT}:/data"
     ports:
       - "10504:10504"
       - "6881:6881"
@@ -117,19 +115,19 @@ services:
     networks:
       - media-network
 
-#  watchtower:
-#    image: containrrr/watchtower:latest
-#    container_name: watchtower
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock
-#    environment:
-#      - WATCHTOWER_CLEANUP=true
-#      - WATCHTOWER_POLL_INTERVAL=86400
-#    restart: unless-stopped
-#    networks:
-#      - media-network
+  #  watchtower:
+  #    image: containrrr/watchtower:latest
+  #    container_name: watchtower
+  #    volumes:
+  #      - /var/run/docker.sock:/var/run/docker.sock
+  #    environment:
+  #      - WATCHTOWER_CLEANUP=true
+  #      - WATCHTOWER_POLL_INTERVAL=86400
+  #    restart: unless-stopped
+  #    networks:
+  #      - media-network
 
-# --- SEARCH HELPERS ---
+  # --- SEARCH HELPERS ---
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
@@ -138,7 +136,6 @@ services:
     restart: unless-stopped
     networks:
       - media-network
-
 
 networks:
   media-network:
