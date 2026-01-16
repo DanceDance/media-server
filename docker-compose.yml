@@ -1,9 +1,7 @@
-version: '3.9'
-
 services:
-
+  # --- MEDIA SERVER ---
   plex:
-    image: plexinc/pms-docker
+    image: plexinc/pms-docker:latest
     container_name: plex
     env_file:
       - ./provision/.env.defaults
@@ -12,217 +10,136 @@ services:
       - HOSTNAME="PlexServer"
     volumes:
       - ./provision/plex:/config
-      - ./content/media:/data/media
-    network_mode: host
-    # ports: # when network: bridge
-    #   - "32400:32400/tcp" 
-    #   - "8324:8324/tcp"   # Required if network: bridge
-    #   - "32469:32469/tcp" # Required if network: bridge
-    #   - "1900:1900/udp"   # Required if network: bridge
-    #   - "32410:32410/udp" # Required if network: bridge
-    #   - "32412:32412/udp" # Required if network: bridge
-    #   - "32413:32413/udp" # Required if network: bridge
-    #   - "32414:32414/udp" # Required if network: bridge
-    privileged: true # libusb_init failed
-    restart: unless-stopped
-    # networks:
-    #   - media-network
-
-  radarr:
-    image: linuxserver/radarr
-    container_name: radarr
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/radarr:/config
-      - ./content:/data
+      - "${WIN_MEDIA_ROOT}/Movies:/data/media/movies"
+      - "${WIN_MEDIA_ROOT}/TV Series:/data/media/tv"
     ports:
-      - "7878:7878"
+      - "32400:32400/tcp"   # Main Access
+      - "1900:1900/udp"     # DLNA
+      - "32469:32469/tcp"   # DLNA
+      - "8324:8324/tcp"     # Plex Companion
+      - "32410:32410/udp"   # GDM Discovery
+      - "32412:32412/udp"   # GDM Discovery
+      - "32413:32413/udp"   # GDM Discovery
+      - "32414:32414/udp"   # GDM Discovery
+    privileged: true
     restart: unless-stopped
     networks:
       - media-network
 
-  sonarr:
-    image: linuxserver/sonarr
-    container_name: sonarr
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/sonarr:/config
-      - ./content:/data
-    ports:
-      - "8989:8989"
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  lidarr:
-    image: linuxserver/lidarr
-    container_name: lidarr
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/lidarr:/config
-      - ./content:/data
-    ports:
-      - "8686:8686"
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  prowlarr:
-    image: linuxserver/prowlarr
-    container_name: prowlarr
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/prowlarr:/config
-    ports:
-      - 9696:9696
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  bazarr:
-    image: linuxserver/bazarr
-    container_name: bazarr
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/bazarr:/config
-      - ./content:/data
-    ports:
-      - "6767:6767"
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  qbittorrent:
-    image: linuxserver/qbittorrent
-    container_name: qbittorrent
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/qbittorrent:/config
-      - ./content/torrents:/data/torrents
-      - ./content/media:/data/media
-    ports:
-      - "8080:8080"
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  jackett:
-    image: linuxserver/jackett
-    container_name: jackett
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/jackett:/config
-    ports:
-      - "9117:9117"
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  ombi:
-    image: linuxserver/ombi
-    container_name: ombi
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/ombi:/config
-    ports:
-      - "3579:3579"
-    restart: unless-stopped
-    networks:
-      - media-network
-
-  heimdall:
-    image: linuxserver/heimdall
-    container_name: heimdall
-    env_file:
-      - ./provision/.env.defaults
-    volumes:
-      - ./provision/heimdall:/config
-    ports:
-      - "80:80"
-      - "443:443"
-      # - "8083:80"
-    restart: unless-stopped
-    networks:
-      - media-network
-
+  # --- REQUESTS & DISCOVERY ---
   overseerr:
-    image: lscr.io/linuxserver/overseerr
+    image: lscr.io/linuxserver/overseerr:latest
     container_name: overseerr
     env_file:
       - ./provision/.env.defaults
     volumes:
       - ./provision/overseerr:/config
     ports:
-      - "5055:5055"
+      - "10500:5055"
     restart: unless-stopped
     networks:
       - media-network
 
-  suggestarr:
-    image: ciuse99/suggestarr
-    container_name: suggestarr
+  # --- MEDIA MANAGEMENT (ARRs) ---
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
     env_file:
       - ./provision/.env.defaults
     volumes:
-      - ./provision/suggestarr:/app/config/config_files
+      - ./provision/radarr:/config
+      - "${WIN_MEDIA_ROOT}/Movies:/data/movies"
+      - "${WIN_DOWNLOADS}:/data/downloads"
     ports:
-      - "5000:5000"
+      - "10501:7878"
     restart: unless-stopped
     networks:
       - media-network
 
-  flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr
-    container_name: flaresolverr
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
     env_file:
       - ./provision/.env.defaults
     volumes:
-      - ./provision/flaresolverr:/config
+      - ./provision/sonarr:/config
+      - "${WIN_MEDIA_ROOT}/TV Series:/data/tv"
+      - "${WIN_DOWNLOADS}:/data/downloads"
     ports:
-      - "8191:8191"
+      - "10502:8989"
     restart: unless-stopped
     networks:
       - media-network
 
-  huntarr:
-    image: ghcr.io/plexguide/huntarr:latest
-    container_name: huntarr
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
     env_file:
       - ./provision/.env.defaults
     volumes:
-      - ./provision/huntarr:/config
+      - ./provision/prowlarr:/config
     ports:
-      - "9705:9705"
+      - "10503:9696"
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  # --- DOWNLOADS ---
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    env_file:
+      - ./provision/.env.defaults
+    environment:
+      - WEBUI_PORT=10504
+    volumes:
+      - ./provision/qbittorrent:/config
+      - "${WIN_DOWNLOADS}:/data/downloads"
+    ports:
+      - "10504:10504"
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  # --- DASHBOARD & UTILS ---
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    env_file:
+      - ./provision/.env.defaults
+    volumes:
+      - ./provision/heimdall:/config
+    ports:
+      - "10505:80"
     restart: unless-stopped
     networks:
       - media-network
 
 #  watchtower:
-#   image: containrrr/watchtower
+#    image: containrrr/watchtower:latest
 #    container_name: watchtower
-#    env_file:
-#      - ./provision/.env.defaults
-#      - ./provision/.env.secrets
-#    environment:
-#      - WATCHTOWER_CLEANUP=true        # Remove old images after update
-#      - WATCHTOWER_POLL_INTERVAL=86400 # Check every 24h (in seconds)
-#      # - WATCHTOWER_NOTIFICATION_TELEGRAM_TOKEN=${TELEGRAM_TOKEN} # cherry-pick from .env.secret
-#      # - WATCHTOWER_NOTIFICATION_TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-#      # - WATCHTOWER_INCLUDE_STOPPED=true # Optional: update stopped containers
-#      # - WATCHTOWER_LABEL_ENABLE=true    # Optional: only update containers with "com.centurylinklabs.watchtower.enable=true"
 #    volumes:
 #      - /var/run/docker.sock:/var/run/docker.sock
+#    environment:
+#      - WATCHTOWER_CLEANUP=true
+#      - WATCHTOWER_POLL_INTERVAL=86400
 #    restart: unless-stopped
 #    networks:
 #      - media-network
 
+# --- SEARCH HELPERS ---
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    ports:
+      - "10506:8191"
+    restart: unless-stopped
+    networks:
+      - media-network
+
+
 networks:
   media-network:
+    name: media-network
