@@ -28,7 +28,7 @@ services:
 
   # --- REQUESTS & DISCOVERY ---
   overseerr:
-    image: lscr.io/linuxserver/overseerr:latest
+    image: lscr.io/linuxserver/overseerr:develop
     container_name: overseerr
     env_file:
       - ./provision/.env.defaults
