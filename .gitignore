@@ -22,3 +22,6 @@ provision/.env.*
 
 !provision/.env.defaults
 
+# Local update scripts and logs
+update_stack.sh
+update.log
