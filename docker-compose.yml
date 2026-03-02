@@ -6,8 +6,13 @@ services:
     env_file:
       - ./provision/.env.defaults
     environment:
+      - TZ=Asia/Taipei
+      - PLEX_UID=1000
+      - PLEX_GID=1000
       - VERSION=docker
       - HOSTNAME="PlexServer"
+    cap_add:
+      - NET_ADMIN
     volumes:
       - ./provision/plex:/config
       - "${WIN_DATA_ROOT}/media/movies:/data/media/movies"
@@ -21,7 +26,6 @@ services:
       - "32412:32412/udp" # GDM Discovery
       - "32413:32413/udp" # GDM Discovery
       - "32414:32414/udp" # GDM Discovery
-    privileged: true
     restart: unless-stopped
     networks:
       - media-network
