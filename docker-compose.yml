@@ -31,13 +31,16 @@ services:
       - media-network
 
   # --- REQUESTS & DISCOVERY ---
-  overseerr:
-    image: lscr.io/linuxserver/overseerr:develop
-    container_name: overseerr
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
     env_file:
       - ./provision/.env.defaults
+    environment:
+      - PORT=5055
     volumes:
-      - ./provision/overseerr:/config
+      - ./provision/overseerr:/app/config
     ports:
       - "10500:5055"
     restart: unless-stopped
@@ -118,18 +121,6 @@ services:
     restart: unless-stopped
     networks:
       - media-network
-
-  #  watchtower:
-  #    image: containrrr/watchtower:latest
-  #    container_name: watchtower
-  #    volumes:
-  #      - /var/run/docker.sock:/var/run/docker.sock
-  #    environment:
-  #      - WATCHTOWER_CLEANUP=true
-  #      - WATCHTOWER_POLL_INTERVAL=86400
-  #    restart: unless-stopped
-  #    networks:
-  #      - media-network
 
   # --- SEARCH HELPERS ---
   flaresolverr:
