@@ -100,6 +100,7 @@ services:
     volumes:
       - ./provision/qbittorrent:/config
       - "${WIN_DATA_ROOT}:/data"
+      - "${WIN_TEMP_ROOT}:/data/incomplete"
     ports:
       - "10504:10504"
       - "6881:6881"
