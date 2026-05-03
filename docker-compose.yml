@@ -15,8 +15,8 @@ services:
       - NET_ADMIN
     volumes:
       - ./provision/plex:/config
-      - "${WIN_DATA_ROOT}/media/movies:/data/media/movies"
-      - "${WIN_DATA_ROOT}/media/tv:/data/media/tv"
+      - "${DATA_ROOT}/media/movies:/data/media/movies"
+      - "${DATA_ROOT}/media/tv:/data/media/tv"
     ports:
       - "32400:32400/tcp" # Main Access
       - "1900:1900/udp" # DLNA
@@ -55,7 +55,7 @@ services:
       - ./provision/.env.defaults
     volumes:
       - ./provision/radarr:/config
-      - "${WIN_DATA_ROOT}:/data"
+      - "${DATA_ROOT}:/data"
     ports:
       - "10501:7878"
     restart: unless-stopped
@@ -69,7 +69,7 @@ services:
       - ./provision/.env.defaults
     volumes:
       - ./provision/sonarr:/config
-      - "${WIN_DATA_ROOT}:/data"
+      - "${DATA_ROOT}:/data"
     ports:
       - "10502:8989"
     restart: unless-stopped
@@ -99,8 +99,8 @@ services:
       - WEBUI_PORT=10504
     volumes:
       - ./provision/qbittorrent:/config
-      - "${WIN_DATA_ROOT}:/data"
-      - "${WIN_TEMP_ROOT}:/data/incomplete"
+      - "${DATA_ROOT}:/data"
+      - "${TEMP_ROOT}:/data/incomplete"
     ports:
       - "10504:10504"
       - "6881:6881"
