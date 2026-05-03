@@ -9,6 +9,10 @@ JOB="0 4 * * 1 /bin/bash $SCRIPT_PATH >> $PROJECT_DIR/update.log 2>&1"
 cat <<EOF > update_stack.sh
 #!/bin/bash
 cd $PROJECT_DIR
+if [ ! -f .env ]; then
+  echo "Initializing .env from .env.defaults..."
+  cp .env.defaults .env
+fi
 /usr/bin/docker compose pull
 /usr/bin/docker compose up -d
 /usr/bin/docker image prune -f

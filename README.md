@@ -83,7 +83,17 @@ The project use the following folder structure: ``content`` and ``provision`` in
 └───provision
 ```
 
-Run `docker-compose up -d`.
+### Option 1: Automatic Setup (Recommended)
+Run `./start.sh`
+This will automatically create a `.env` file from `.env.defaults` (if it doesn't exist) and start the containers.
+
+### Option 2: Manual Setup
+If you prefer not to use the script, you must manually create the `.env` file before starting:
+```bash
+cp .env.defaults .env
+# Edit .env with your specific paths if needed
+docker compose up -d
+```
 
 How to add env variables (in case want to set watchover telegram notifications)
 

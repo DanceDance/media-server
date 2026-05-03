@@ -18,9 +18,9 @@ provision/flaresolverr/*
 provision/huntarr/*
 provision/suggestarr/*
 
-provision/.env.*
-
-!provision/.env.defaults
+.env
+.env.*
+!.env.defaults
 
 # Local update scripts and logs
 update_stack.sh

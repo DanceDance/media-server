@@ -1,10 +1,14 @@
+x-environment-check:
+  DATA_ROOT: "${DATA_ROOT:?Error: .env file missing or DATA_ROOT not set. Please run start.sh or copy .env.defaults to .env}"
+  TEMP_ROOT: "${TEMP_ROOT:?Error: .env file missing or TEMP_ROOT not set. Please run start.sh or copy .env.defaults to .env}"
+
 services:
   # --- MEDIA SERVER ---
   plex:
     image: plexinc/pms-docker:latest
     container_name: plex
     env_file:
-      - ./provision/.env.defaults
+      - .env
     environment:
       - TZ=Asia/Taipei
       - PLEX_UID=1000
@@ -36,7 +40,7 @@ services:
     container_name: seerr
     init: true
     env_file:
-      - ./provision/.env.defaults
+      - .env
     environment:
       - PORT=5055
     volumes:
@@ -52,7 +56,7 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     env_file:
-      - ./provision/.env.defaults
+      - .env
     volumes:
       - ./provision/radarr:/config
       - "${DATA_ROOT}:/data"
@@ -66,7 +70,7 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     env_file:
-      - ./provision/.env.defaults
+      - .env
     volumes:
       - ./provision/sonarr:/config
       - "${DATA_ROOT}:/data"
@@ -80,7 +84,7 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     env_file:
-      - ./provision/.env.defaults
+      - .env
     volumes:
       - ./provision/prowlarr:/config
     ports:
@@ -94,7 +98,7 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     env_file:
-      - ./provision/.env.defaults
+      - .env
     environment:
       - WEBUI_PORT=10504
     volumes:
@@ -114,7 +118,7 @@ services:
     image: lscr.io/linuxserver/heimdall:latest
     container_name: heimdall
     env_file:
-      - ./provision/.env.defaults
+      - .env
     volumes:
       - ./provision/heimdall:/config
     ports:
