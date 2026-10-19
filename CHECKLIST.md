@@ -6,7 +6,7 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 
 ## Progress Overview
 
-- **Phase 1: Critical Bug Fixes & Stability** `[ 2 / 5 ]`
+- **Phase 1: Critical Bug Fixes & Stability** `[ 3 / 5 ]`
 - **Phase 2: Hardware Acceleration & Playback Performance** `[ 0 / 5 ]`
 - **Phase 3: Storage, Cleanup & I/O Optimization** `[ 0 / 5 ]`
 - **Phase 4: Privacy & Network Security (Gluetun VPN)** `[ 0 / 4 ]`
@@ -27,10 +27,10 @@ A living checklist tracking all identified fixes, optimizations, and architectur
   - **Action**: Add dedicated 2G tmpfs mount (`/transcode:size=2G,mode=0777`) to `plex` service.
   - **Verification**: Verified inside container with `df -h /transcode` (tmpfs 2.0G mounted, 0% used).
 
-- [ ] **1.3 Fix FlareSolverr runaway container storage leak (Reclaim 2.2 GB)**
+- [x] **1.3 Fix FlareSolverr runaway container storage leak (Reclaim 2.2 GB)**
   - **Issue**: FlareSolverr writable container layer has grown to **2.22 GB** due to accumulated Chromium `/tmp` cache and Widevine updates.
   - **Action**: Add `tmpfs: - /tmp:size=256M` and `mem_limit: 512m` to the `flaresolverr` service in `docker-compose.yml`. Recreate container with `docker compose up -d --force-recreate flaresolverr`.
-  - **Verification**: Run `docker ps -s` and verify `flaresolverr` container size is reset to a few kilobytes.
+  - **Verification**: Size dropped from 2.22 GB to 22.4 MB; tmpfs 256M active on `/tmp`; HTTP health check returned `"FlareSolverr is ready!"`.
 
 - [ ] **1.4 Configure Plex connection webhooks in Radarr & Sonarr**
   - **Issue**: Neither app notifies Plex when downloads complete. Because `/mnt/storage` is an NTFS filesystem (`ntfs3`), Linux kernel inotify events do not reliably trigger automatic Plex scans.
