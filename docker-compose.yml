@@ -21,6 +21,8 @@ services:
       - ./provision/plex:/config
       - "${DATA_ROOT}/media/movies:/data/media/movies"
       - "${DATA_ROOT}/media/tv:/data/media/tv"
+    tmpfs:
+      - /transcode:size=2G,mode=0777
     ports:
       - "32400:32400/tcp" # Main Access
       - "1900:1900/udp" # DLNA
