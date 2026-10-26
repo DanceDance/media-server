@@ -23,5 +23,5 @@ provision/suggestarr/*
 !.env.defaults
 
 # Local update scripts and logs
-update_stack.sh
 update.log
+.update_stack.lock

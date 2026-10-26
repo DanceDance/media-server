@@ -1,27 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Get the absolute path of the current directory
-PROJECT_DIR=$(pwd)
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="$PROJECT_DIR/update_stack.sh"
-JOB="0 4 * * 1 /bin/bash $SCRIPT_PATH >> $PROJECT_DIR/update.log 2>&1"
+JOB="0 4 * * 1 /bin/bash \"$SCRIPT_PATH\" >> \"$PROJECT_DIR/update.log\" 2>&1"
 
-# 1. Create the actual update script if it doesn't exist
-cat <<EOF > update_stack.sh
-#!/bin/bash
-cd $PROJECT_DIR
-if [ ! -f .env ]; then
-  echo "Initializing .env from .env.defaults..."
-  cp .env.defaults .env
+if [[ ! -x "$SCRIPT_PATH" ]]; then
+  echo "Update script is missing or not executable: $SCRIPT_PATH" >&2
+  exit 1
 fi
-/usr/bin/docker compose pull
-/usr/bin/docker compose up -d
-/usr/bin/docker image prune -f
-EOF
 
-chmod +x update_stack.sh
-
-# 2. Add to crontab if not already present
-(crontab -l 2>/dev/null | grep -F "$SCRIPT_PATH") || (crontab -l 2>/dev/null; echo "$JOB") | crontab -
-
-echo "✅ Cron job scheduled: Every Monday at 4:00 AM"
-echo "✅ Update script created at: $SCRIPT_PATH"
+existing_crontab=$(crontab -l 2>/dev/null || true)
+if ! grep -Fq "$SCRIPT_PATH" <<< "$existing_crontab"; then
+  { printf '%s\n' "$existing_crontab"; printf '%s\n' "$JOB"; } | crontab -
+  echo "Scheduled weekly update with backup for Monday at 4:00 AM."
+else
+  echo "Weekly update job is already scheduled."
+fi
