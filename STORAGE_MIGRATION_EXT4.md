@@ -1,8 +1,6 @@
 # Storage Migration Plan: NTFS to ext4
 
-This guide contains the complete, step-by-step procedure to migrate your media drive (`/mnt/storage`) from **NTFS** to **ext4** without data loss.
-
----
+This plan migrates `/mnt/storage` from NTFS to ext4. Formatting `/dev/sda1` permanently erases it, so do not proceed until the independent Windows backup has been copied and verified. Keep that backup unchanged until the restored data and services have been checked.
 
 ## Current Environment Summary
 
@@ -13,204 +11,215 @@ This guide contains the complete, step-by-step procedure to migrate your media d
 | **Used Storage** | **~442 GB** | Total capacity ~699 GB (~258 GB free) |
 | **Windows PC** | `192.168.50.161` (`MIG29-PC`) | Backup host with free disk space on `D:` |
 | **Backup Path** | `D:\MediaBackup` | Local folder on Windows PC |
-| **Network Link** | LAN (1 Gbps) | ~110 MB/s transfer speed (~50–60 min copy) |
+| **Network Link** | LAN (1 Gbps) | Actual transfer speed and duration vary |
 
----
+## Phase 0: Preflight
+
+On the Linux server, confirm the source partition and mount point before starting. These commands are read-only:
+
+```bash
+lsblk -f
+findmnt /mnt/storage
+df -hT /mnt/storage
+```
+
+Confirm `/mnt/storage` is the intended NTFS filesystem on `/dev/sda1`, and record its current UUID and the exact contents to preserve. Verify the Samba share `\\192.168.50.32\LinuxHDD` is configured to expose `/mnt/storage` (not some other location). From Windows, confirm the share can be read and that you can create, read, and delete a small test file on it. Remove the test file before the backup.
+
+Check that `D:` has enough free space for the data plus headroom. Ensure `D:\MediaBackup` is either new or contains no unrelated data. The commands below merge into an existing destination and do not remove destination-only files.
+
+Record which containers/services use `/mnt/storage` and their expected user/group IDs. Inspect the Compose configuration and existing file ownership/permissions before deciding what ownership to apply after formatting. Do not assume every container runs as `kkgmig29`.
+
+Before making the backup, stop or pause every service that can write to `/mnt/storage` so the source does not change during the copy. For the media stack, run this on the server and keep it stopped through formatting and restore:
+
+```bash
+cd ~/media-server
+docker compose down
+```
+
+Stop any other writers as well. If the Samba service is part of the Compose stack, arrange another way to serve the share or use the WSL/SSH option; do not restart a writer just to keep the backup path available. Confirm the chosen backup method still has access to the source after writers are stopped.
 
 ## Phase 1: Back Up All Data to Windows
 
-You must back up the entire contents of `/mnt/storage` to `D:\MediaBackup` on your Windows PC before formatting.
+Back up the entire contents of `/mnt/storage` to `D:\MediaBackup` before formatting.
 
-### Option A: Using Windows PowerShell or CMD (Recommended & Fastest)
+### Option A: Windows PowerShell or Command Prompt
 
-> [!IMPORTANT]
-> If you run this in **PowerShell**, **Command Prompt (cmd)**, or **Git Bash / Zsh**, you must quote the paths so backslashes and slashes are not misinterpreted by your shell:
-
-Open **PowerShell** or **Command Prompt** (as Administrator) on your Windows PC:
+Run on the Windows PC:
 
 ```cmd
-robocopy "\\192.168.50.32\LinuxHDD" "D:\MediaBackup" /E /MT:16 /R:1 /W:1
+robocopy "\\192.168.50.32\LinuxHDD" "D:\MediaBackup" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:1 /W:1 /V /TEE /LOG:"D:\MediaBackup-robocopy.log"
 ```
 
-* **`/E`**: Copies all subdirectories, including empty ones.
-* **`/MT:16`**: Multi-threaded (16 simultaneous streams) to saturate 1 Gbps LAN (~110 MB/s).
-* **`/R:1 /W:1`**: Only retry once with a 1-second wait on locked files instead of hanging.
+`/E` copies subdirectories, including empty ones. `/COPY:DAT` and `/DCOPY:DAT` preserve file data, attributes, timestamps, and directory timestamps where supported; Linux ownership and permissions are not represented by this Windows backup. `/MT:16` uses multiple copy threads. `/R:1 /W:1` limits retries. `/LOG` records the results.
 
----
+After it finishes, inspect the summary. Robocopy exit codes **0–7** indicate no copy failure (though codes 1–7 may report copied files or differences); **8 or higher** means at least one failure and must be resolved before proceeding. Check the log for failed files and rerun the copy as needed.
 
-### Option B: Using Windows File Explorer (Visual Drag-and-Drop)
+### Option B: Windows File Explorer
 
-1. Press `Win + R`, type:
-   ```text
-   \\192.168.50.32\LinuxHDD
-   ```
-   and press **Enter**.
-2. If prompted for credentials, use your Linux server username (`kkgmig29`) and Samba password.
-3. Select all folders inside (`MediaServer`, `Downloads`, etc.), copy them, and paste them into `D:\MediaBackup`.
+1. Press `Win + R`, enter `\\192.168.50.32\LinuxHDD`, and press Enter.
+2. If prompted, use the Linux/Samba account configured for this share.
+3. Copy the contents into `D:\MediaBackup`.
+4. For a large backup, prefer Option A because its log and exit code make failures easier to identify.
 
----
+### Option C: WSL with rsync
 
-### Option C: Using WSL on your Windows PC
-
-From your WSL terminal on Windows:
+Use this only if SSH access is enabled and the WSL environment has `rsync` installed. Create the destination directory first:
 
 ```bash
-rsync -avh --progress kkgmig29@192.168.50.32:/mnt/storage/ /mnt/d/MediaBackup/
+mkdir -p /mnt/d/MediaBackup
+rsync -avh --no-owner --no-group --no-perms --progress --partial kkgmig29@192.168.50.32:/mnt/storage/ /mnt/d/MediaBackup/
 ```
 
----
+Confirm `rsync` exits with status 0 and review its output for errors. The `--no-owner --no-group --no-perms` flags avoid trying to preserve Linux ownership and permissions on the typical Windows-mounted `D:` filesystem. This backup does not preserve Linux ownership, ACLs, or extended attributes.
 
-### Verification: Confirm Backup is Complete
+### Verify the backup
 
-Before touching the server disk, verify the backup size:
-* On Windows, right-click `D:\MediaBackup` → **Properties**.
-* Confirm **Size on disk** is approximately **~435–442 GB**.
-* Check that both `MediaServer/media/movies` and `MediaServer/media/tv` folders are populated.
+Before touching the server disk:
 
----
+- Confirm the Robocopy log has no failed files, or (for WSL) that `rsync` completed with exit status 0.
+- Compare source and destination folder/file counts and total logical size. The Windows “Size on disk” can differ because of allocation units; use the logical “Size” as a rough comparison, not a sole pass criterion.
+- Open representative files from different folders and verify expected top-level folders, including `MediaServer/media/movies` and `MediaServer/media/tv`, are populated.
+- For stronger assurance, generate and compare checksums for important data or use a checksum-capable backup process. Do not rely only on visual inspection or approximate size.
 
-## Phase 2: Stop Docker Services & Unmount Disk
+Do not format unless the backup is complete, readable, and has enough free space for a full restore.
 
-SSH into your Linux server (`ssh kkgmig29@192.168.50.32`):
+## Phase 2: Confirm Services Are Stopped and Unmount the Disk
+
+SSH into the server (`ssh kkgmig29@192.168.50.32`):
 
 ```bash
-# 1. Navigate to your media-server directory
 cd ~/media-server
-
-# 2. Stop all running media containers
 docker compose down
-
-# 3. Verify no containers are locking /mnt/storage
 docker ps
+findmnt /mnt/storage
+sudo fuser -vm /mnt/storage
+```
 
-# 4. Unmount the NTFS partition
+The Docker stop here is a final check; all services that write to the disk should already have been stopped before the backup and must remain stopped. Check that no remaining container or service is using the mount. Stop any other processes that use it. Then unmount:
+
+```bash
 sudo umount /mnt/storage
 ```
 
-> [!NOTE]
-> If `sudo umount /mnt/storage` says "target is busy", find what process is using it with:
-> `sudo lsof +D /mnt/storage` or `sudo fuser -mv /mnt/storage`
-> and terminate that process.
+If unmount reports “target is busy,” use `sudo fuser -vm /mnt/storage` to identify users and stop them cleanly. `lsof +D /mnt/storage` can help, but may take a long time on a large tree. Do not use a lazy or forced unmount as a workaround.
 
----
+Confirm it is unmounted before formatting:
+
+```bash
+findmnt /mnt/storage
+```
+
+No mount entry should be returned. Also verify the target device one final time:
+
+```bash
+lsblk -f
+```
 
 ## Phase 3: Format the Drive to ext4
 
 > [!CAUTION]
-> This command will erase all data on `/dev/sda1`. Ensure Phase 1 backup verification was completed before executing this step!
+> Formatting permanently erases `/dev/sda1`. Proceed only after the Windows backup has been independently verified and the unmount and device checks above are correct.
 
-Run `mkfs.ext4` with the `-m 1` flag (sets reserved superuser blocks to 1% instead of Linux's default 5%, which instantly grants you an extra **~28 GB** of usable free space):
+Create the filesystem with 1% reserved blocks:
 
 ```bash
 sudo mkfs.ext4 -m 1 -L Storage /dev/sda1
 ```
 
-Once formatting completes, get the new disk **UUID**:
+`-m 1` reserves 1% for privileged use rather than ext4’s typical 5% default. On a roughly 700 GB filesystem, this makes about 28 GB more available to non-root users than a 5% reservation; it does not increase total filesystem capacity.
+
+Read and record the new UUID and confirm the filesystem type:
 
 ```bash
 sudo blkid /dev/sda1
+lsblk -f
 ```
 
-You will see output similar to:
-```text
-/dev/sda1: LABEL="Storage" UUID="a1b2c3d4-e5f6-7890-abcd-ef1234567890" BLOCK_SIZE="4096" TYPE="ext4" PARTUUID="..."
-```
+Confirm `/dev/sda1` reports `TYPE="ext4"`. Copy its UUID for the `fstab` entry.
 
-Copy the string inside `UUID="..."`.
+## Phase 4: Update `/etc/fstab` and Mount
 
----
-
-## Phase 4: Update `/etc/fstab` & Permissions
-
-### 1. Back up your existing `fstab`:
+Back up the current file, then edit it:
 
 ```bash
-sudo cp /etc/fstab /etc/fstab.bak
-```
-
-### 2. Edit `/etc/fstab`:
-
-```bash
+sudo cp -a /etc/fstab /etc/fstab.bak
 sudo nano /etc/fstab
 ```
 
-Find the old line for `/mnt/storage` (which used `ntfs3` or `ntfs`). Replace it with the new `ext4` entry:
+Replace the existing entry for `/mnt/storage` (do not leave duplicate entries) with:
 
 ```text
 UUID=YOUR_NEW_UUID_HERE /mnt/storage ext4 defaults,noatime 0 2
 ```
-*(Replace `YOUR_NEW_UUID_HERE` with the actual UUID from `blkid`)*.
 
-Press `Ctrl + O` then `Enter` to save, and `Ctrl + X` to exit.
-
-### 3. Mount the new ext4 drive:
+Replace the placeholder with the UUID from `blkid`. Save the file, then check the entry and mount:
 
 ```bash
-sudo mount -a
+sudo findmnt --verify --verbose
+sudo mount /mnt/storage
+findmnt -no SOURCE,FSTYPE,UUID,TARGET /mnt/storage
+df -hT /mnt/storage
 ```
 
-### 4. Verify the mount:
+Verify the source/UUID is the newly formatted `/dev/sda1`, the filesystem type is `ext4`, and the target is `/mnt/storage` before restoring. Capacity will be somewhat below the marketed disk size because of unit conversion and filesystem metadata; do not use a specific `df` number as the only check.
+
+## Phase 5: Set Access and Restore Data
+
+The new filesystem root is initially owned by `root`. Set access based on the users and groups identified during preflight. For example, if `kkgmig29` and the relevant containers all use that account/group, set the root directory ownership and a suitable group-writable mode:
 
 ```bash
-df -h /mnt/storage
-```
-* You should see `TYPE: ext4` and approximately **~690 GB** total available.
-
-### 5. Set correct user ownership:
-
-Ensure your user (`kkgmig29`) owns the directory so Docker containers and Samba can write without permission errors:
-
-```bash
-sudo chown -R kkgmig29:kkgmig29 /mnt/storage
-sudo chmod -R 775 /mnt/storage
+sudo chown kkgmig29:kkgmig29 /mnt/storage
+sudo chmod 2775 /mnt/storage
 ```
 
----
+The setgid bit on the directory makes newly created items inherit its group. This does not recursively change restored files. If containers run under different numeric UIDs/GIDs, configure ownership, ACLs, or group access to match their actual IDs. Avoid blanket `chmod -R 775`: it marks every file executable and can create unintended access. Apply any required ACLs or targeted permission changes after restore.
 
-## Phase 5: Restore All Data from Windows
-
-Now copy everything back from `D:\MediaBackup` to the newly formatted ext4 drive on the Linux server.
-
-### Using Windows PowerShell / CMD:
+Restore from the verified backup using the same method used to back up. With Windows Robocopy:
 
 ```cmd
-robocopy "D:\MediaBackup" "\\192.168.50.32\LinuxHDD" /E /MT:16 /R:1 /W:1
+robocopy "D:\MediaBackup" "\\192.168.50.32\LinuxHDD" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:1 /W:1 /V /TEE /LOG:"D:\MediaRestore-robocopy.log"
 ```
 
-Wait for Robocopy to finish (~50–60 minutes).
+Review the log and summary. Resolve any failed files (exit code 8 or higher) and compare the restored folder/file counts and logical size with the backup. Keep the backup unchanged.
 
----
-
-## Phase 6: Start Media Stack & Verification
-
-Back on the Linux server:
+If using WSL/SSH instead, first confirm on the server that `findmnt -no SOURCE,FSTYPE,TARGET /mnt/storage` shows the new ext4 filesystem mounted at `/mnt/storage`. Then run in WSL:
 
 ```bash
-# 1. Start the Docker containers
-cd ~/media-server
-docker compose up -d
-
-# 2. Check container status
-docker compose ps
-
-# 3. Check Plex / Radarr / Sonarr logs for clean startup
-docker logs --tail 30 plex
-docker logs --tail 30 radarr
-docker logs --tail 30 sonarr
+rsync -avh --no-owner --no-group --no-perms --progress --partial /mnt/d/MediaBackup/ kkgmig29@192.168.50.32:/mnt/storage/
 ```
 
-### 4. Verify in Plex:
-1. Open Plex Web (`http://192.168.50.32:32400/web`).
-2. Trigger a library scan for Movies and TV Shows.
-3. In **Settings → Library**, check **"Update my library automatically"** — on ext4, Linux kernel `inotify` works natively, so new downloads will now be recognized instantly!
+Confirm `rsync` exits with status 0 and review its output for errors before starting services. This assumes SSH access and that the remote account can write into `/mnt/storage` with the permissions configured above.
 
----
+## Phase 6: Start Services and Verify
 
-## Rollback Plan (If Needed)
+On the server, verify the mount and restored paths before starting containers:
 
-If anything fails before formatting:
-* Your data remains safe on `/mnt/storage`. Simply run `sudo mount -a` and `docker compose up -d`.
+```bash
+findmnt -no SOURCE,FSTYPE,UUID,TARGET /mnt/storage
+du -sh /mnt/storage
+ls -la /mnt/storage
+```
 
-If you already formatted `/dev/sda1` and want to abort:
-* All your data is safely stored in `D:\MediaBackup` on your Windows PC.
-* You can re-copy it at any time back to `/mnt/storage` via `\\192.168.50.32\LinuxHDD`.
+Then start the stack:
+
+```bash
+cd ~/media-server
+docker compose up -d
+docker compose ps
+```
+
+Check logs using the actual container names shown by Compose (they may not be exactly `plex`, `radarr`, and `sonarr`):
+
+```bash
+docker compose logs --tail 30
+```
+
+Open Plex Web at `http://192.168.50.32:32400/web`, scan the Movies and TV libraries, and confirm representative media plays. If automatic library updates are enabled, verify by adding a test file through the normal workflow and confirming Plex detects it. ext4 supports inotify, but successful Plex notifications also depend on Plex settings, container mounts, and access to filesystem events.
+
+Keep `D:\MediaBackup` intact until the restored data and applications have been verified.
+
+## Rollback and Recovery
+
+- **Before formatting:** The original data is still on the NTFS disk. If needed, restore the original `/etc/fstab` from `/etc/fstab.bak`, mount the NTFS filesystem, verify `/mnt/storage`, then start the services.
+- **After formatting:** The original disk data is gone. The Windows backup is the recovery source. Mount the new ext4 filesystem, ensure the Samba share still exposes `/mnt/storage`, and restore the backup. Do not delete the Windows backup until recovery and service checks pass.
+- **If the new mount fails:** Do not copy data into `/mnt/storage` until `findmnt` confirms the ext4 filesystem is mounted there; otherwise files may be written to the server’s root filesystem beneath the mount point.
