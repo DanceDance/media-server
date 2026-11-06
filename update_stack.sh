@@ -6,6 +6,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RETENTION=2
 STACK_NEEDS_START=0
 BACKUP_COMPLETE=0
+backup_file=""
 
 cd "$PROJECT_DIR"
 
@@ -30,8 +31,6 @@ if [[ -z "${BACKUP_ROOT:-}" ]]; then
 fi
 
 mkdir -p "$BACKUP_ROOT"
-timestamp=$(date '+%Y%m%d-%H%M%S')
-backup_file="$BACKUP_ROOT/media-server-$timestamp.tar.gz"
 
 finish() {
   local status=$?
@@ -40,12 +39,18 @@ finish() {
     echo "Starting the stack after interrupted backup..."
     /usr/bin/docker compose up -d || status=1
   fi
-  if (( ! BACKUP_COMPLETE )); then
+  if (( ! BACKUP_COMPLETE )) && [[ -n "$backup_file" ]]; then
     rm -f -- "$backup_file"
   fi
   exit "$status"
 }
 trap finish EXIT
+
+echo "=== Starting stack update: $(date -Is) ==="
+/usr/bin/docker compose pull --quiet
+
+timestamp=$(date '+%Y%m%d-%H%M%S')
+backup_file="$BACKUP_ROOT/media-server-$timestamp.tar.gz"
 
 # Stop services briefly so their SQLite databases and config files are consistent.
 STACK_NEEDS_START=1
@@ -67,7 +72,6 @@ if (( ${#backups[@]} > RETENTION )); then
   done
 fi
 
-/usr/bin/docker compose pull
-/usr/bin/docker compose up -d
+/usr/bin/docker image prune -f
 
-echo "Update completed successfully."
+echo "Update completed successfully: $(date -Is)"
