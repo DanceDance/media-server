@@ -77,7 +77,7 @@ A living checklist tracking all identified fixes, optimizations, and architectur
   - **Status**: Active incomplete downloads write to the SSD (`/home/kkgmig29/tmp/MediaServerTemp`) to prevent HDD thrashing, then move to `/mnt/storage/MediaServer/downloads` on completion. With `/mnt/storage` now on `ext4` and `copyUsingHardlinks: True` enabled in Radarr/Sonarr, imports from `downloads/` to `media/` use instant zero-copy hardlinks.
 
 - [x] **3.4 Migrate `/mnt/storage` from NTFS (`ntfs3`) to `ext4`**
-  - **Status**: Completed. `/dev/sda1` is formatted as `ext4` (`Storage`) and mounted at `/mnt/storage` with `defaults,noatime` in `/etc/fstab` (documented in `STORAGE_MIGRATION_EXT4.md`).
+  - **Status**: Completed. `/dev/sda1` is formatted as `ext4` (`Storage`) and mounted at `/mnt/storage` with `defaults,noatime` in `/etc/fstab` (documented in `finished_plans/STORAGE_MIGRATION_EXT4.md`).
 
 - [ ] **3.5 Configure Low-Disk-Space Notifications**
   - **Action**: Set up notification alerts in Seerr/Radarr/Sonarr (via Telegram, Pushbullet, or Discord) when available disk space falls below 50 GB.

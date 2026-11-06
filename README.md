@@ -12,6 +12,7 @@ This is a fully automated home media server setup using Docker Compose. It pulls
 - [User Flow](#user-flow)
 - [System Architecture](#system-architecture)
 - [Deployment](#deployment)
+- [Post-Setup & Runtime Tweaks (`POST_SETUP.md`)](POST_SETUP.md)
 - [Service Configuration](#service-configuration)
   - [Plex](#plex)
   - [Heimdall](#heimdall)
@@ -103,6 +104,8 @@ export TELEGRAM_CHAT_ID=real_chat_id
 ```
 
 ## Service Configuration
+
+> **Migrating or setting up on a new machine?** See [**`POST_SETUP.md`**](POST_SETUP.md) for the short list of machine-specific settings (`.env` paths, `ext4` mount, `./setup_cron.sh`, and Plex LAN/IP preferences).
 
 Setting up all the services correctly takes time and attention to detail. If this is your first time working with self-hosted apps, Docker, or media management tools, expect some trial and error. There’s no one-size-fits-all setup, but the following sections walk through the main configuration steps you’ll need.
 
