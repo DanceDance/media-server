@@ -7,7 +7,7 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 ## Progress Overview
 
 - **Phase 1: Critical Bug Fixes & Stability** `[ 4 / 5 ]`
-- **Phase 2: Playback Performance & Indexer Health** `[ 1 / 2 ]`
+- **Phase 2: Playback Performance & Indexer Health** `[ 2 / 2 ]`
 - **Phase 3: Storage, Cleanup & I/O Optimization** `[ 2 / 5 ]`
 - **Phase 4: Privacy & Network Security (Gluetun VPN)** `[ 0 / 4 ]`
 - **Phase 5: Missing Services & Stack Expansion** `[ 0 / 5 ]`
@@ -50,12 +50,10 @@ A living checklist tracking all identified fixes, optimizations, and architectur
   - **Issue**: Because Plex runs in a Docker bridge network (`172.18.0.0/16`) without `LanNetworksBandwidth` set, Plex classified all local `192.168.50.x` devices (including the Xiaomi TV Box S 3rd Gen `MiTV-AFMU0`) as `WAN` (`local="0"`).
   - **Action**: Set `LanNetworksBandwidth="192.168.50.0/24"` in Plex `Preferences.xml` (verified direct play of 1080p 10-bit HEVC + AAC 5.1 with zero transcoding).
 
-- [ ] **2.5 Fix Broken Prowlarr Indexer Definitions & Rate-Limited Indexers**
-  - **Issue**:
-    1. **Active Error (`IndexerNoDefinitionCheck`)**: `RuTracker.RU` and `BitSearch` have missing/obsolete definitions and will not work until removed or re-added.
-    2. **Long-Term Failures (`IndexerLongTermStatusCheck`)**: `1337x`, `ExtraTorrent.st`, `kickasstorrents.ws`, and `Uindex` are failing due to rate limits (429) or Cloudflare blocks.
-  - **Action**: Remove broken `RuTracker.RU` and `BitSearch` entries in Prowlarr; clean up or assign FlareSolverr tags to the remaining failing indexers.
-  - **Verification**: Check Prowlarr, Radarr, and Sonarr `/health` endpoints and verify zero indexer warnings/errors.
+- [x] **2.5 Fix Broken Prowlarr Indexer Definitions & Rate-Limited Indexers**
+  - **Issue**: `RuTracker.RU` and `BitSearch` had missing/obsolete definitions (`IndexerNoDefinitionCheck`), and `1337x`, `ExtraTorrent.st`, `kickasstorrents.ws`, and `Uindex` had been failing for months (`IndexerLongTermStatusCheck`).
+  - **Action**: Removed the 6 broken indexers, added and verified 4 working trackers (`EZTV`, `YTS`, `LimeTorrents`, `Nyaa.si`) alongside `Knaben`, `The Pirate Bay`, and `TorrentDownload` (7 active indexers total), and synced to Radarr and Sonarr.
+  - **Verification**: Verified Prowlarr, Radarr, and Sonarr `/health` endpoints report zero warnings/errors.
 
 ---
 
