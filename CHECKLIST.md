@@ -7,11 +7,11 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 ## Progress Overview
 
 - **Phase 1: Critical Bug Fixes & Stability** `[ 4 / 5 ]`
-- **Phase 2: Hardware Acceleration & Playback Performance** `[ 0 / 5 ]`
+- **Phase 2: Playback Performance & Indexer Health** `[ 1 / 2 ]`
 - **Phase 3: Storage, Cleanup & I/O Optimization** `[ 2 / 5 ]`
 - **Phase 4: Privacy & Network Security (Gluetun VPN)** `[ 0 / 4 ]`
 - **Phase 5: Missing Services & Stack Expansion** `[ 0 / 5 ]`
-- **Phase 6: Docker Best Practices & Long-Term Maintenance** `[ 0 / 5 ]`
+- **Phase 6: Docker Best Practices & Long-Term Maintenance** `[ 1 / 5 ]`
 
 ---
 
@@ -44,28 +44,11 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 
 ---
 
-## Phase 2: Hardware Acceleration & Playback Performance
+## Phase 2: Playback Performance & Indexer Health
 
-- [ ] **2.1 Pass Intel QuickSync GPU (`/dev/dri`) into Plex**
-  - **Issue**: Plex currently transcodes 100% on the dual-core CPU because the Intel HD Graphics 4600 integrated GPU (`/dev/dri/renderD128`) is not mapped to the container.
-  - **Action**: In `docker-compose.yml`, add `devices: - /dev/dri:/dev/dri` and `group_add: ["990", "44"]` to Plex.
-  - **Verification**: Verify `/dev/dri` exists inside container (`docker exec plex ls -la /dev/dri`) and verify hardware transcoding badge `(hw)` appears in Plex Dashboard during an H.264 transcode.
-
-- [ ] **2.2 Automate 5.1 → 2.0 audio downmixing (Replace Windows `.bat` script)**
-  - **Issue**: Xiaomi Mi TV (`MiTV-AFMU0`) cannot direct play AAC 5.1 audio. Plex takes 71 seconds to transcode 10 seconds of video (`slothMode="1"`), forcing manual execution of `change_all_5.1_to_2.0.bat`.
-  - **Action**: Deploy an automated audio conversion tool (e.g. **Unmanic** container or a Radarr/Sonarr post-import bash script) that checks downloaded media and automatically adds or converts a 2.0 AAC stereo track.
-  - **Verification**: Test playback of an automated file on the Xiaomi Mi TV; verify it direct plays both audio and video without buffering.
-
-- [ ] **2.3 Optimize Radarr & Sonarr Custom Formats for Audio Compatibility**
-  - **Issue**: Quality profile #4 has `x265` scored at `+1000`. Micro-encodes typically strip stereo tracks and leave only AAC 5.1.
-  - **Action**: Add custom format rules to favor releases with AC3/E-AC3 or multi-audio (containing a 2.0 track) or slightly penalize releases with exclusive AAC 5.1.
-  - **Verification**: Review interactive search results in Radarr/Sonarr and confirm higher scores for formats compatible with the Mi TV.
-
-- [ ] **2.4 Check Xiaomi Mi TV Plex Client Audio Settings**
-  - **Action**: On the Mi TV, navigate to Plex Settings -> Advanced / Audio:
-    - Test toggling **Audio Passthrough** (Disabled vs HDMI/Optical).
-    - Ensure **Direct Play** and **Direct Stream** are enabled.
-  - **Verification**: Verify whether stereo downmix is handled by the TV client directly when passthrough is adjusted.
+- [x] **2.2 Configure Plex LAN Subnet (`LanNetworksBandwidth="192.168.50.0/24"`)**
+  - **Issue**: Because Plex runs in a Docker bridge network (`172.18.0.0/16`) without `LanNetworksBandwidth` set, Plex classified all local `192.168.50.x` devices (including the Xiaomi TV Box S 3rd Gen `MiTV-AFMU0`) as `WAN` (`local="0"`).
+  - **Action**: Set `LanNetworksBandwidth="192.168.50.0/24"` in Plex `Preferences.xml` (verified direct play of 1080p 10-bit HEVC + AAC 5.1 with zero transcoding).
 
 - [ ] **2.5 Fix Broken Prowlarr Indexer Definitions & Rate-Limited Indexers**
   - **Issue**:
@@ -154,10 +137,8 @@ A living checklist tracking all identified fixes, optimizations, and architectur
   - **Action**: Add default logging configuration (`max-size: "10m"`, `max-file: "3"`) across all services in `docker-compose.yml`.
   - **Verification**: Verify JSON log file sizes in `/var/lib/docker/containers/` are capped.
 
-- [ ] **6.2 Prune obsolete containers & dangling images (Reclaim 5.79 GB on SSD)**
-  - **Issue**: `docker system df` shows **5.79 GB** of reclaimable unused images (14 old image layers from weekly updates) plus 2 exited `hello-world` containers (`modest_albattani`, `nifty_northcutt`).
-  - **Action**: Remove the 2 exited `hello-world` containers and run `docker image prune -a -f`.
-  - **Verification**: Run `docker system df` and confirm reclaimed SSD space.
+- [x] **6.2 Prune dangling Docker images (Reclaimed 6.41 GB on SSD)**
+  - **Status**: Completed via `docker image prune -f` in `update_stack.sh`, reclaiming 6.41 GB of old untagged image layers.
 
 - [ ] **6.3 Standardize `.env` variable usage**
   - **Action**: Replace hardcoded values (`TZ=Asia/Taipei`, `PLEX_UID=1000`) in `docker-compose.yml` with `${TZ}`, `${PUID}`, `${PGID}` from `.env`.
