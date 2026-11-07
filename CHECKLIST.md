@@ -6,7 +6,7 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 
 ## Progress Overview
 
-- **Phase 1: Critical Bug Fixes & Stability** `[ 4 / 5 ]`
+- **Phase 1: Critical Bug Fixes & Stability** `[ 5 / 5 ]`
 - **Phase 2: Playback Performance & Indexer Health** `[ 2 / 2 ]`
 - **Phase 3: Storage, Cleanup & I/O Optimization** `[ 5 / 5 ]`
 - **Phase 5: Missing Services & Stack Expansion (Optional)** `[ 1 / 2 ]`
@@ -31,10 +31,8 @@ A living checklist tracking all identified fixes, optimizations, and architectur
   - **Action**: Add `tmpfs: - /tmp:size=256M` and `mem_limit: 512m` to the `flaresolverr` service in `docker-compose.yml`. Recreate container with `docker compose up -d --force-recreate flaresolverr`.
   - **Verification**: Size dropped from 2.22 GB to 22.4 MB; tmpfs 256M active on `/tmp`; HTTP health check returned `"FlareSolverr is ready!"`.
 
-- [ ] **1.4 Configure Plex connection webhooks in Radarr & Sonarr (Optional)**
-  - **Context**: Now that `/mnt/storage` has been migrated to `ext4` and Plex has `FSEventLibraryUpdatesEnabled="1"` and `FSEventLibraryPartialScanEnabled="1"` enabled, Linux kernel `inotify` events work natively. Adding webhooks in Radarr/Sonarr is optional for explicit rename/import triggers.
-  - **Action**: In Radarr & Sonarr, go to **Settings -> Connect -> Add (+) -> Plex Media Server**, set host to `plex`, port `32400`, enter token, and enable update on import/rename (or apply via API).
-  - **Verification**: Test connection in Radarr/Sonarr settings and verify a green checkmark.
+- [x] **1.4 Configure Plex connection webhooks in Radarr & Sonarr**
+  - **Status**: Completed. Added `Plex Media Server` (`plex:32400`, `updateLibrary: true`) under **Settings -> Connect** in both Radarr and Sonarr for imports, upgrades, renames, and deletions.
 
 - [x] **1.5 Optimize `update_stack.sh` (Quiet Pulls, Single-Stop Backup Flow & Image Prune)**
   - **Issue**: `docker compose pull` lacked `--quiet` (filling `update.log` with 475 KB of progress bars), stopped/restarted containers twice per run, and left untagged `<none>` images behind after updates.
