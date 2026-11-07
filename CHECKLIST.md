@@ -8,10 +8,9 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 
 - **Phase 1: Critical Bug Fixes & Stability** `[ 4 / 5 ]`
 - **Phase 2: Playback Performance & Indexer Health** `[ 2 / 2 ]`
-- **Phase 3: Storage, Cleanup & I/O Optimization** `[ 2 / 5 ]`
-- **Phase 4: Privacy & Network Security (Gluetun VPN)** `[ 0 / 4 ]`
-- **Phase 5: Missing Services & Stack Expansion** `[ 0 / 5 ]`
-- **Phase 6: Docker Best Practices & Long-Term Maintenance** `[ 1 / 5 ]`
+- **Phase 3: Storage, Cleanup & I/O Optimization** `[ 5 / 5 ]`
+- **Phase 5: Missing Services & Stack Expansion (Optional)** `[ 1 / 2 ]`
+- **Phase 6: Docker Best Practices & Long-Term Maintenance** `[ 5 / 5 ]`
 
 ---
 
@@ -59,17 +58,11 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 
 ## Phase 3: Storage, Disk Cleanup & I/O Optimization
 
-- [ ] **3.1 Clean up leftover temporary & archive files**
-  - **Completed so far**: Deleted `/mnt/storage/Downloads/torrents/wind_and_truth.tar` (reclaimed 2.0 GB), unmonitored/deleted *Desperate Housewives* S1–S4 (reclaimed 59.1 GB), and replaced *LOTR* trilogy remuxes with 1080p HEVC Extended releases (reclaimed ~81 GB).
-  - **Remaining Action**:
-    - Delete the 2 leftover hidden `.parts` files in `/mnt/storage/MediaServer/media/movies/` and `tv/`.
-    - Review and clean up `/mnt/storage/Downloads/torrents/Wind and Truth` (1.9 GB), `Downloads/torrents/MAM` (540 MB), and `Downloads/MAM_Points` (357 MB) if no longer needed.
-  - **Verification**: Run `df -h /mnt/storage` and check freed disk space.
+- [x] **3.1 Clean up leftover temporary & archive files (Reclaimed ~142 GB)**
+  - **Status**: Completed. Deleted `/mnt/storage/Downloads/torrents/wind_and_truth.tar` (2.0 GB), unmonitored/deleted *Desperate Housewives* S1–S4 (59.1 GB), and replaced *LOTR* trilogy remuxes with 1080p HEVC Extended releases (~81 GB). Left `/mnt/storage/Downloads` intact as those torrents are actively seeding.
 
-- [ ] **3.2 Configure Radarr & Sonarr automated cleanup (`deleteEmptyFolders` & Recycle Bin)**
-  - **Issue**: Both Radarr and Sonarr have `deleteEmptyFolders: false` and no Recycle Bin configured (`recycleBin: ""`).
-  - **Action**: Enable `deleteEmptyFolders: true` in Radarr & Sonarr **Media Management** settings, and optionally configure a Recycle Bin folder with auto-cleanup after 7 days.
-  - **Verification**: Query `/api/v3/config/mediamanagement` in Radarr and Sonarr to confirm settings are active.
+- [x] **3.2 Configure Radarr & Sonarr automated cleanup (`deleteEmptyFolders`)**
+  - **Status**: Completed. Enabled `deleteEmptyFolders: true` in both Radarr and Sonarr via `/api/v3/config/mediamanagement`.
 
 - [x] **3.3 `TEMP_ROOT` SSD Incomplete Downloads + `ext4` Hardlink Imports**
   - **Status**: Active incomplete downloads write to the SSD (`/home/kkgmig29/tmp/MediaServerTemp`) to prevent HDD thrashing, then move to `/mnt/storage/MediaServer/downloads` on completion. With `/mnt/storage` now on `ext4` and `copyUsingHardlinks: True` enabled in Radarr/Sonarr, imports from `downloads/` to `media/` use instant zero-copy hardlinks.
@@ -77,74 +70,35 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 - [x] **3.4 Migrate `/mnt/storage` from NTFS (`ntfs3`) to `ext4`**
   - **Status**: Completed. `/dev/sda1` is formatted as `ext4` (`Storage`) and mounted at `/mnt/storage` with `defaults,noatime` in `/etc/fstab` (documented in `finished_plans/STORAGE_MIGRATION_EXT4.md`).
 
-- [ ] **3.5 Configure Low-Disk-Space Notifications**
-  - **Action**: Set up notification alerts in Seerr/Radarr/Sonarr (via Telegram, Pushbullet, or Discord) when available disk space falls below 50 GB.
+- [x] **3.5 Configure Low-Disk-Space Notifications**
+  - **Status**: Already active via host **Monit** (`monit.service`) in `/etc/monit/conf.d/diskcheck` (`space usage > 95%` on `/mnt/storage`), `/etc/monit/conf.d/cputemp` (`> 80°C`), and `/etc/monit/conf.d/hostalerts` (`swap usage > 60%`), which send Telegram alerts via `~/.bin/telegram_notify.sh`.
 
 ---
 
-## Phase 4: Privacy & Network Security (Gluetun VPN)
+## Phase 5: Missing Services & Stack Expansion (Optional)
 
-- [ ] **4.1 Add Gluetun VPN container to `docker-compose.yml`**
-  - **Action**: Add `qmcgaw/gluetun` service configured for your VPN provider (e.g. ProtonVPN, Mullvad, AirVPN) with WireGuard or OpenVPN.
-  - **Verification**: Start Gluetun and verify successful connection in `docker logs gluetun`.
+- [ ] **5.1 Add Maintainerr for automated media lifecycle & cleanup (Future / Someday)**
+  - **Context**: Maintainerr connects to Plex, Seerr, Radarr, and Sonarr to automatically unmonitor and delete watched or stale movies/shows after a configurable retention period.
+  - **Action**: Add `ghcr.io/jorenn92/maintainerr:latest` to `docker-compose.yml` (e.g. on port `10507:6246`) and configure cleanup rules when needed.
 
-- [ ] **4.2 Route qBittorrent network through Gluetun**
-  - **Action**:
-    - Attach `network_mode: "service:gluetun"` to `qbittorrent`.
-    - Move qBittorrent ports (`10504:10504` and torrent listen port) to the `gluetun` container service definition.
-    - Remove exposed ports from `qbittorrent`.
-  - **Verification**: Access qBittorrent Web UI at `http://localhost:10504`.
-
-- [ ] **4.3 Confirm qBittorrent IP & Killswitch**
-  - **Action**: Execute `docker exec gluetun curl -s ifconfig.me` and check against public host IP.
-  - **Verification**: Verify IP matches the VPN gateway, not your home ISP.
-
-- [ ] **4.4 Update Radarr & Sonarr Download Client connection**
-  - **Action**: Ensure Radarr and Sonarr can still communicate with qBittorrent (host: `gluetun` or `localhost`, port: `10504`).
-  - **Verification**: Test Download Client connection in Radarr and Sonarr.
-
----
-
-## Phase 5: Missing Services & Stack Expansion
-
-- [ ] **5.1 Add Bazarr for automated subtitle management**
-  - **Issue**: Bazarr is documented in `README.md` and `.gitignore` but missing from `docker-compose.yml`.
-  - **Action**: Add `lscr.io/linuxserver/bazarr:latest` to `docker-compose.yml` mapped to movies and TV folders on port `10507:6767`.
-  - **Verification**: Access Bazarr at port `10507`, connect Radarr and Sonarr, and test subtitle retrieval.
-
-- [ ] **5.2 Add Audiobookshelf for audiobook streaming**
-  - **Context**: You already have an audiobooks library (`/mnt/storage/MediaServer/media/audiobooks`) with *The Expanse* and *Red Rising*.
-  - **Action**: Add `ghcr.io/advplyr/audiobookshelf:latest` mapped to the audiobooks directory on port `10509:80`.
-  - **Verification**: Access web interface at port `10509`, create audiobooks library, and test playback from browser or mobile app.
-
-- [ ] **5.3 Upgrade Dashboard (Homepage or Homarr)**
-  - **Context**: Heimdall provides static links; modern dashboards like **Homepage** provide real-time widgets (Plex streams, download speeds, disk space, upcoming releases).
-  - **Action**: (Optional) Add Homepage container with service widgets configured.
-
-- [ ] **5.4 Add Tautulli for Plex Analytics & Monitoring (Optional)**
-  - **Action**: Add `lscr.io/linuxserver/tautulli` to track playback statistics, bandwidth usage, and user stream history.
-
-- [ ] **5.5 Reorganize port allocations in documentation**
-  - **Action**: Ensure all new services follow your sequential port mapping pattern (`10500` through `10510`).
+- [x] **5.5 Reorganize port allocations in documentation**
+  - **Status**: Completed in `README.md` (`32400` and sequential `10500–10506` port table).
 
 ---
 
 ## Phase 6: Docker Best Practices & Hygiene
 
-- [ ] **6.1 Add Docker container logging limits**
-  - **Action**: Add default logging configuration (`max-size: "10m"`, `max-file: "3"`) across all services in `docker-compose.yml`.
-  - **Verification**: Verify JSON log file sizes in `/var/lib/docker/containers/` are capped.
+- [x] **6.1 Add Docker container logging limits**
+  - **Status**: Completed. Added `x-logging` YAML anchor (`max-size: "10m"`, `max-file: "3"`) across all 8 services in `docker-compose.yml`.
 
 - [x] **6.2 Prune dangling Docker images (Reclaimed 6.41 GB on SSD)**
   - **Status**: Completed via `docker image prune -f` in `update_stack.sh`, reclaiming 6.41 GB of old untagged image layers.
 
-- [ ] **6.3 Standardize `.env` variable usage**
-  - **Action**: Replace hardcoded values (`TZ=Asia/Taipei`, `PLEX_UID=1000`) in `docker-compose.yml` with `${TZ}`, `${PUID}`, `${PGID}` from `.env`.
+- [x] **6.3 Standardize `.env` variable usage**
+  - **Status**: Completed. Replaced hardcoded `TZ=Asia/Taipei`, `PLEX_UID=1000`, `PLEX_GID=1000` in `docker-compose.yml` with `${TZ}`, `${PUID}`, `${PGID}` from `.env`.
 
-- [ ] **6.4 Define container memory limits for utility services**
-  - **Completed so far**: Added `mem_limit: 512m` to `flaresolverr`.
-  - **Remaining Action**: Add `mem_limit: 256m` to `heimdall` in `docker-compose.yml` to cap utility service RAM usage.
+- [x] **6.4 Define container memory limits for utility services**
+  - **Status**: Completed. Added `mem_limit: 512m` to `flaresolverr` and `mem_limit: 256m` to `heimdall` in `docker-compose.yml`.
 
-- [ ] **6.5 Remove stray Node.js files from repository root**
-  - **Issue**: Empty/unused `package.json` (3 bytes) and `package-lock.json` (91 bytes) exist in `~/media-server`.
-  - **Action**: Delete `package.json` and `package-lock.json` from `~/media-server`.
+- [x] **6.5 Remove stray Node.js files from repository root**
+  - **Status**: Completed. Removed unused `package.json` and `package-lock.json` from `~/media-server`.

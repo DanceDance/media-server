@@ -2,6 +2,12 @@ x-environment-check:
   DATA_ROOT: "${DATA_ROOT:?Error: .env file missing or DATA_ROOT not set. Please run start.sh or copy .env.defaults to .env}"
   TEMP_ROOT: "${TEMP_ROOT:?Error: .env file missing or TEMP_ROOT not set. Please run start.sh or copy .env.defaults to .env}"
 
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # --- MEDIA SERVER ---
   plex:
@@ -10,9 +16,9 @@ services:
     env_file:
       - .env
     environment:
-      - TZ=Asia/Taipei
-      - PLEX_UID=1000
-      - PLEX_GID=1000
+      - TZ=${TZ}
+      - PLEX_UID=${PUID}
+      - PLEX_GID=${PGID}
       - VERSION=docker
       - HOSTNAME="PlexServer"
     cap_add:
@@ -32,6 +38,7 @@ services:
       - "32412:32412/udp" # GDM Discovery
       - "32413:32413/udp" # GDM Discovery
       - "32414:32414/udp" # GDM Discovery
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -49,6 +56,7 @@ services:
       - ./provision/overseerr:/app/config
     ports:
       - "10500:5055"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -64,6 +72,7 @@ services:
       - "${DATA_ROOT}:/data"
     ports:
       - "10501:7878"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -78,6 +87,7 @@ services:
       - "${DATA_ROOT}:/data"
     ports:
       - "10502:8989"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -91,6 +101,7 @@ services:
       - ./provision/prowlarr:/config
     ports:
       - "10503:9696"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -111,6 +122,7 @@ services:
       - "10504:10504"
       - "6881:6881"
       - "6881:6881/udp"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -123,8 +135,10 @@ services:
       - .env
     volumes:
       - ./provision/heimdall:/config
+    mem_limit: 256m
     ports:
       - "10505:80"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
@@ -138,6 +152,7 @@ services:
     mem_limit: 512m
     ports:
       - "10506:8191"
+    logging: *default-logging
     restart: unless-stopped
     networks:
       - media-network
