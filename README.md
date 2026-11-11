@@ -35,7 +35,7 @@ A Docker Compose home media server stack for automated media requests, torrent d
 | **Radarr** | `10501` | `http://radarr:7878` | Movie library and download manager |
 | **Sonarr** | `10502` | `http://sonarr:8989` | TV show library and download manager |
 | **Prowlarr** | `10503` | `http://prowlarr:9696` | Indexer manager synced to Radarr & Sonarr |
-| **qBittorrent** | `10504` | `http://qbittorrent:10504` | Torrent download client |
+| **qBittorrent** | `10504` (Web UI), `51413` (TCP/UDP peers) | `http://qbittorrent:10504` | Torrent download client |
 | **Heimdall** | `10505` | `http://heimdall:80` | Web dashboard for service links |
 | **FlareSolverr** | `10506` | `http://flaresolverr:8191` | Proxy server to bypass Cloudflare challenges |
 
@@ -138,6 +138,7 @@ Because `plex` runs in a Docker bridge network (`172.18.0.0/16`), update these s
   - **Default Save Path:** `/data/downloads`
   - **Keep incomplete torrents in:** Checked -> `/data/incomplete`
 - **Categories:** `radarr` -> `/data/downloads/movies`, `sonarr` -> `/data/downloads/tv`
+- **Options -> Connection -> Listening Port:** `51413` (set automatically via `TORRENTING_PORT=51413` in `docker-compose.yml`).
 - **Options -> BitTorrent -> Seeding Limits:** Enable **When ratio reaches** `0` -> **Pause torrent**.
 
 ### Prowlarr (`http://<host>:10503`) & FlareSolverr

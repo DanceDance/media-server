@@ -8,6 +8,12 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+x-healthcheck-defaults: &default-healthcheck
+  interval: 60s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
 services:
   # --- MEDIA SERVER ---
   plex:
@@ -56,6 +62,9 @@ services:
       - ./provision/overseerr:/app/config
     ports:
       - "10500:5055"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5055/api/v1/status >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
@@ -72,6 +81,9 @@ services:
       - "${DATA_ROOT}:/data"
     ports:
       - "10501:7878"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:7878/ping >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
@@ -87,6 +99,9 @@ services:
       - "${DATA_ROOT}:/data"
     ports:
       - "10502:8989"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8989/ping >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
@@ -101,6 +116,9 @@ services:
       - ./provision/prowlarr:/config
     ports:
       - "10503:9696"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9696/ping >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
@@ -114,14 +132,18 @@ services:
       - .env
     environment:
       - WEBUI_PORT=10504
+      - TORRENTING_PORT=51413
     volumes:
       - ./provision/qbittorrent:/config
       - "${DATA_ROOT}:/data"
       - "${TEMP_ROOT}:/data/incomplete"
     ports:
       - "10504:10504"
-      - "6881:6881"
-      - "6881:6881/udp"
+      - "51413:51413"
+      - "51413:51413/udp"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:10504/ >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
@@ -135,9 +157,14 @@ services:
       - .env
     volumes:
       - ./provision/heimdall:/config
+    tmpfs:
+      - /tmp:size=64M
     mem_limit: 256m
     ports:
       - "10505:80"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/health >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
@@ -152,6 +179,9 @@ services:
     mem_limit: 512m
     ports:
       - "10506:8191"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8191/health >/dev/null || exit 1"]
     logging: *default-logging
     restart: unless-stopped
     networks:
