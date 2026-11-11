@@ -72,7 +72,7 @@ ${TEMP_ROOT}/                  # Mounted as /data/incomplete in qbittorrent (SSD
    ```bash
    ./setup_cron.sh
    ```
-   Schedules [`update_stack.sh`](update_stack.sh) every Monday at `04:00 AM` (pulls images quietly, stops containers once, archives `./provision` to `${DATA_ROOT}/backup` keeping the last 2 backups, starts containers, and prunes dangling images).
+   Schedules [`update_stack.sh`](update_stack.sh) every Monday at `04:23 AM` (pulls images quietly with retries, stops containers once, archives `./provision` and stack configs to `${DATA_ROOT}/backup` keeping the last 2 backups, starts containers, prunes dangling images, and sends a Telegram alert on failure).
 
 ---
 
@@ -87,16 +87,16 @@ UUID=<DRIVE_UUID>  /mnt/storage  ext4  defaults,noatime  0  2
 ```
 
 ### 2. Set Host Paths in `.env`
-Update `.env` with the host's storage and SSD scratch paths:
+Copy `.env.defaults` to `.env` (`cp .env.defaults .env`) and update the host's storage and SSD scratch paths:
 ```ini
 DATA_ROOT=/mnt/storage/MediaServer
 TEMP_ROOT=/home/<user>/tmp/MediaServerTemp
 ```
 
 ### 3. Restore `./provision` Backup & Run Scripts
-Restoring the latest backup from `${DATA_ROOT}/backup/` restores all service configurations, custom formats, categories, and API keys automatically:
+Extracting `provision` from the latest backup in `${DATA_ROOT}/backup/` restores all service configurations, custom formats, categories, and API keys without overwriting the `.env` edited in Step 2:
 ```bash
-tar -xzf /mnt/storage/MediaServer/backup/media-server-<LATEST>.tar.gz -C .
+tar -xzf /mnt/storage/MediaServer/backup/media-server-<LATEST>.tar.gz -C . provision
 ./start.sh
 ./setup_cron.sh
 ```
