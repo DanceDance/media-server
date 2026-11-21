@@ -72,7 +72,7 @@ ${TEMP_ROOT}/                  # Mounted as /data/incomplete in qbittorrent (SSD
    ```bash
    ./setup_cron.sh
    ```
-   Schedules [`update_stack.sh`](update_stack.sh) every Monday at `04:23 AM` (pulls images quietly with retries, stops containers once, archives `./provision` and stack configs to `${DATA_ROOT}/backup` keeping the last 2 backups, starts containers, prunes dangling images, and sends a Telegram alert on failure).
+   Schedules [`update_stack.sh`](update_stack.sh) every Monday at `04:23 AM` plus an `@reboot` catch-up check if no backup is newer than 7 days (pulls images quietly with retries, stops containers once, archives `./provision` and stack configs to `${DATA_ROOT}/backup` keeping the last 2 backups, starts containers, prunes dangling images, and sends a Telegram alert on failure).
 
 ---
 
@@ -153,7 +153,7 @@ Because `plex` runs in a Docker bridge network (`172.18.0.0/16`), update these s
   - Enable **Use Hardlinks instead of Copy** (`copyUsingHardlinks: true`) and **Unmonitor Deleted Movies** (Radarr).
   - **Root Folders:** `/data/media/movies` (Radarr) and `/data/media/tv` (Sonarr).
   - **Radarr Naming:** Movie Folder `{Movie Title} ({Release Year})`, Standard Movie `{Movie Title} ({Release Year}) {Quality Full}`.
-  - **Sonarr Naming:** Series Folder `{Series Title} {Series TitleYear}`, Season Folder `Season {season:00}`, Standard Episode `S{season:00}E{episode:00} - {Series Title} - {Episode Title} {Quality Full}`.
+  - **Sonarr Naming:** Series Folder `{Series TitleYear}`, Season Folder `Season {season:00}`, Standard Episode `S{season:00}E{episode:00} - {Series Title} - {Episode Title} {Quality Full}`.
 - **Settings -> Custom Formats & Profiles (`HD-1080p`):**
   - Score `x265` (HEVC non-Remux) at `+1000`, `HDR` at `-1000`, and `Language: Not Original` at `-10000`.
 
