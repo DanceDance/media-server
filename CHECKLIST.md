@@ -78,6 +78,7 @@ A living checklist tracking all identified fixes, optimizations, and architectur
 - [ ] **5.1 Add Maintainerr for automated media lifecycle & cleanup (Future / Someday)**
   - **Context**: Maintainerr connects to Plex, Seerr, Radarr, and Sonarr to automatically unmonitor and delete watched or stale movies/shows after a configurable retention period.
   - **Action**: Add `ghcr.io/jorenn92/maintainerr:latest` to `docker-compose.yml` (e.g. on port `10507:6246`) and configure cleanup rules when needed.
+  - **Current Workaround & Priority**: Very low priority—currently deleting watched shows/seasons directly from Plex on the TV box (logged in under the owner account with delete permissions).
 
 - [x] **5.5 Reorganize port allocations in documentation**
   - **Status**: Completed in `README.md` (`32400` and sequential `10500–10506` port table).
